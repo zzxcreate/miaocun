@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">秒存</string>
+    <string name="accessibility_label">秒存 · 自动分享</string>
+    <string name="accessibility_desc">用于在抖音内自动点击「分享 → 复制链接」，以及把当前屏幕画面保存为图片。所有处理都在本机完成，不会上传或收集你的任何数据。</string>
+</resources>

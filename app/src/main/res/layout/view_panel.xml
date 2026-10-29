@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="188dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_panel"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingTop="8dp"
+        android:paddingRight="8dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="秒存"
+            android:textColor="@color/text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/panelClose"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:contentDescription="关闭面板"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="×"
+            android:textColor="@color/muted"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/actionAuto"
+        style="@style/PanelRow"
+        android:text="⚡ 自动解析（点分享）" />
+
+    <TextView
+        android:id="@+id/actionClip"
+        style="@style/PanelRow"
+        android:text="📋 粘贴解析（已复制链接）" />
+
+    <TextView
+        android:id="@+id/actionShot"
+        style="@style/PanelRow"
+        android:text="📷 保存当前画面" />
+
+    <TextView
+        android:id="@+id/actionSettings"
+        style="@style/PanelRow"
+        android:text="⚙️ 设置与记录" />
+
+    <TextView
+        android:id="@+id/actionQuit"
+        style="@style/PanelRow"
+        android:text="✕ 关闭浮窗" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="12dp"
+        android:paddingTop="4dp"
+        android:paddingRight="12dp"
+        android:paddingBottom="2dp"
+        android:text="自动解析失败时：手动「分享 → 复制链接」，再点粘贴解析。"
+        android:textColor="@color/muted"
+        android:textSize="10sp" />
+
+</LinearLayout>

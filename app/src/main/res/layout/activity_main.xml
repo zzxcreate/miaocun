@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="18dp"
+        android:paddingTop="28dp"
+        android:paddingRight="18dp"
+        android:paddingBottom="36dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="秒存"
+                android:textColor="@color/text"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:text="v1.0"
+                android:textColor="@color/accent"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="刷抖音时一键保存无水印视频与图片"
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
+        <!-- 权限 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView style="@style/SectionTitle" android:text="① 开启权限" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="6dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/Label" android:text="悬浮窗" />
+
+                    <TextView
+                        android:id="@+id/tvOverlayStatus"
+                        style="@style/Hint"
+                        android:text="未开启" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnOverlayPermission"
+                    style="@style/BtnGhost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="去开启" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/Label" android:text="无障碍服务" />
+
+                    <TextView
+                        android:id="@+id/tvAccessibilityStatus"
+                        style="@style/Hint"
+                        android:text="未开启" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnAccessibility"
+                    style="@style/BtnGhost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="去开启" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/Label" android:text="通知" />
+
+                    <TextView
+                        android:id="@+id/tvNotificationStatus"
+                        style="@style/Hint"
+                        android:text="未开启" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnNotification"
+                    style="@style/BtnGhost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="去开启" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="说明：无障碍服务仅用于自动点击「分享 → 复制链接」与截取当前画面，数据全部留在本机。"
+                android:textColor="@color/muted"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- 开关 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView style="@style/SectionTitle" android:text="② 浮窗与自动化" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/Label" android:text="显示悬浮球" />
+
+                    <TextView style="@style/Hint" android:text="在其它应用上显示「存」按钮" />
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switchOverlay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView style="@style/Label" android:text="自动解析" />
+
+                    <TextView style="@style/Hint" android:text="点悬浮球后自动帮你点分享并复制链接" />
+                </LinearLayout>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switchAutomation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnClip"
+                style="@style/BtnPrimary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="从剪贴板解析并保存" />
+        </LinearLayout>
+
+        <!-- 截图裁剪 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView style="@style/SectionTitle" android:text="③ 截图裁剪（单位 dp）" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="按「保存当前画面」后，会从屏幕截图里裁掉顶部/底部/左右的界面元素，剩下的就是视频区域。" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/etCropTop"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input"
+                    android:gravity="center"
+                    android:hint="上"
+                    android:inputType="number"
+                    android:maxLength="4"
+                    android:paddingLeft="4dp"
+                    android:paddingRight="4dp"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/muted"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/etCropBottom"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginLeft="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input"
+                    android:gravity="center"
+                    android:hint="下"
+                    android:inputType="number"
+                    android:maxLength="4"
+                    android:paddingLeft="4dp"
+                    android:paddingRight="4dp"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/muted"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/etCropLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginLeft="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input"
+                    android:gravity="center"
+                    android:hint="左"
+                    android:inputType="number"
+                    android:maxLength="4"
+                    android:paddingLeft="4dp"
+                    android:paddingRight="4dp"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/muted"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/etCropRight"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginLeft="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input"
+                    android:gravity="center"
+                    android:hint="右"
+                    android:inputType="number"
+                    android:maxLength="4"
+                    android:paddingLeft="4dp"
+                    android:paddingRight="4dp"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/muted"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnSaveCrop"
+                style="@style/BtnGhost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="保存裁剪参数" />
+        </LinearLayout>
+
+        <!-- 接口 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView style="@style/SectionTitle" android:text="④ 自定义解析接口（可选）" />
+
+            <TextView
+                style="@style/Hint"
+                android:text="留空则使用内置解析。填一个你自己的接口地址，秒存会以「?url=分享链接」发起 GET，返回 JSON 里的 media/items 数组即可。" />
+
+            <EditText
+                android:id="@+id/etApi"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input"
+                android:hint="https://example.com/api/parse"
+                android:inputType="textUri"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:singleLine="true"
+                android:textColor="@color/text"
+                android:textColorHint="@color/muted"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnSaveApi"
+                style="@style/BtnGhost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="保存接口" />
+        </LinearLayout>
+
+        <!-- 记录 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginBottom="0dp"
+                    android:text="⑤ 最近保存" />
+
+                <Button
+                    android:id="@+id/btnClearHistory"
+                    style="@style/BtnGhost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="30dp"
+                    android:text="清空" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutHistory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="仅限个人学习与备份使用，请尊重创作者版权"
+            android:textColor="@color/muted"
+            android:textSize="10sp" />
+
+    </LinearLayout>
+</ScrollView>
