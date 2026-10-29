@@ -37,14 +37,19 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      # 固定调试签名证书：debug keystore 默认在每台 runner 上重新生成，
-      # 签名一换，手机上就无法覆盖安装（提示"应用未安装"）。
-      # 缓存住它，之后所有 APK 签名一致，可以直接升级安装。
-      - name: Cache debug keystore
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: android-debug-keystore-v1
+      # 固定签名证书：runner 自带的 debug.keystore 每次都不同，签名一变
+      # 手机上就无法覆盖安装（提示"应用未安装"）。这里用仓库里固定的一份；
+      # 首次运行时自动生成，生成后提交回仓库即可长期复用。
+      - name: Ensure fixed debug keystore
+        run: |
+          if [ ! -f app/miaocun-debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore app/miaocun-debug.keystore -storetype PKCS12 \
+              -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          ls -l app/miaocun-debug.keystore
 
       - name: Assemble debug
         run: gradle assembleDebug --no-daemon --stacktrace
@@ -55,3 +60,11 @@ jobs:
           name: miaocun-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # 仅在证书还没提交进仓库时有用：把它下载下来提交一次即可。
+      - name: Upload debug keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-keystore
+          path: app/miaocun-debug.keystore
+          if-no-files-found: warn

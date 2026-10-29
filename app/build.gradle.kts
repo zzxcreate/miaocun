@@ -15,6 +15,21 @@ android {
         versionName = "1.1.0"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // 固定调试签名证书：GitHub runner 每次构建都会重新生成
+            // ~/.android/debug.keystore，签名一变手机就无法覆盖安装。
+            // 仓库里带一份固定的证书，就能一直直接升级安装。
+            val ks = file("miaocun-debug.keystore")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
