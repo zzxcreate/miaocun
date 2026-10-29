@@ -37,6 +37,15 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      # 固定调试签名证书：debug keystore 默认在每台 runner 上重新生成，
+      # 签名一换，手机上就无法覆盖安装（提示"应用未安装"）。
+      # 缓存住它，之后所有 APK 签名一致，可以直接升级安装。
+      - name: Cache debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
       - name: Assemble debug
         run: gradle assembleDebug --no-daemon --stacktrace
 
