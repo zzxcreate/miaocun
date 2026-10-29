@@ -18,8 +18,19 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # 不再使用 android-actions/setup-android：runner 自带 Android SDK，
+      # 那个 action 内部的 sdkmanager 在部分镜像上会直接 exit 1。
+      # 这里只补一份许可证文件，缺的 platform / build-tools 由 AGP 自己下载。
+      - name: Prepare Android SDK licenses
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          if [ -z "$SDK" ]; then SDK="/usr/local/lib/android/sdk"; fi
+          echo "using SDK: $SDK"
+          mkdir -p "$SDK/licenses"
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$SDK/licenses/android-sdk-license"
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$SDK/licenses/android-sdk-preview-license"
+          echo "android.sdk.licenses done"
+          ls -1 "$SDK" || true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
