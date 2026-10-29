@@ -1,6 +1,7 @@
 package com.miaocun.app.douyin
 
 import android.content.Context
+import com.miaocun.app.core.DiagLog
 import com.miaocun.app.core.Prefs
 import java.io.IOException
 import java.net.URLEncoder
@@ -30,6 +31,16 @@ data class MediaItem(
  */
 object DouyinParser {
 
+    /**
+     * 内置解析接口。
+     *
+     * 抖音自己的接口现在都要签名（a_bogus / ArgusSecurityPlugin），
+     * 分享页 `_ROUTER_DATA` 里也已经不放播放地址了，直连解析基本拿不到东西。
+     * 所以默认走一个第三方解析接口，返回的是**无水印直链**。
+     * 接口失效时在「设置」里换一个自己的接口即可（见 Prefs.api）。
+     */
+    const val DEFAULT_API = "https://api.bugpk.com/api/douyin"
+
     private val URL_RE = Regex("""https?://[A-Za-z0-9\-._~:/?#\[\]@!%&'()*+,;=]+""")
     private val ID_RE = Regex("""/(?:video|note|slides)/(\d{6,})""")
     private val MODAL_RE = Regex("""(?:modal_id|item_ids|aweme_id|group_id)=(\d{6,})""")
@@ -58,21 +69,37 @@ object DouyinParser {
 
     suspend fun parse(context: Context, shareText: String): List<MediaItem> =
         withContext(Dispatchers.IO) {
-            val url = extractUrl(shareText) ?: return@withContext emptyList()
+            val url = extractUrl(shareText)
+            if (url == null) {
+                DiagLog.log(context, "parse", "文本里没有链接")
+                return@withContext emptyList()
+            }
+            DiagLog.log(context, "parse", "链接=" + url)
 
-            val api = Prefs.get(context).api.trim()
-            if (api.isNotEmpty()) {
-                val custom = runCatching { parseCustomApi(api, url) }.getOrNull()
-                if (!custom.isNullOrEmpty()) return@withContext custom
+            val api = Prefs.get(context).api.trim().ifEmpty { DEFAULT_API }
+
+            // 1. 解析接口（默认内置接口，返回无水印直链）
+            val fromApi = runCatching { parseApi(context, api, url) }
+                .onFailure { DiagLog.log(context, "parse", "接口调用失败：" + (it.message ?: it.javaClass.simpleName)) }
+                .getOrNull()
+            if (!fromApi.isNullOrEmpty()) return@withContext fromApi
+
+            // 2. 自定义接口的其它常见返回格式
+            if (api != DEFAULT_API) {
+                val fromCustom = runCatching { parseCustomApi(api, url) }.getOrNull()
+                if (!fromCustom.isNullOrEmpty()) return@withContext fromCustom
             }
 
+            // 3. 本身就是媒体直链
             if (isDirectMedia(url)) {
                 return@withContext listOf(
                     MediaItem(url, directKind(url), "直接链接")
                 )
             }
 
+            // 4. 老办法兜底：分享页 / iteminfo（现在多半是空的，留着是因为偶尔还能用）
             val id = extractId(url)
+            DiagLog.log(context, "parse", "接口没结果，回落本地解析，作品 id=" + (id ?: "无"))
 
             val sharePages = ArrayList<String>()
             sharePages.add(url)
@@ -92,6 +119,77 @@ object DouyinParser {
 
             emptyList()
         }
+
+    // ------------------------------------------------------------- 解析接口
+
+    /**
+     * 调解析接口，兼容常见返回结构：
+     * `{code, data:{type,title,url,images[],video_backup[]}}`（内置接口就是这种）。
+     */
+    private fun parseApi(context: Context, api: String, shareUrl: String): List<MediaItem> {
+        val separator = if (api.contains("?")) "&" else "?"
+        val encoded = URLEncoder.encode(shareUrl, "UTF-8")
+        val body = Http.getString(api + separator + "url=" + encoded, null)
+        DiagLog.log(context, "parse", "接口返回 " + body.length + " 字节")
+
+        val root = runCatching { JSONObject(body) }.getOrNull()
+        if (root == null) {
+            DiagLog.log(context, "parse", "接口返回不是 JSON：" + body.take(80))
+            return emptyList()
+        }
+        if (root.has("code") && root.optInt("code", 200) != 200) {
+            DiagLog.log(context, "parse", "接口错误 code=" + root.optInt("code") + " msg=" + root.optString("msg"))
+            return emptyList()
+        }
+
+        val data = root.optJSONObject("data") ?: root
+        val title = cleanTitle(
+            data.optString("title").ifEmpty { data.optString("desc") }
+        )
+
+        val out = ArrayList<MediaItem>()
+
+        // 图集
+        val images = data.optJSONArray("images")
+        if (images != null) {
+            for (i in 0 until images.length()) {
+                val node = images.opt(i)
+                val u = when (node) {
+                    is String -> node
+                    is JSONObject -> firstUrl(node) ?: node.optString("url")
+                    else -> ""
+                }
+                if (u.startsWith("http")) out.add(MediaItem(u, MediaItem.Kind.IMAGE, title))
+            }
+        }
+        if (out.isNotEmpty()) return out
+
+        // 视频：优先原画直链
+        val direct = data.optString("url")
+        if (direct.startsWith("http")) {
+            out.add(MediaItem(direct, MediaItem.Kind.VIDEO, title))
+            return out
+        }
+
+        // 备用线路里挑码率最高的一条
+        val backup = data.optJSONArray("video_backup")
+        var best: String? = null
+        var bestRate = -1L
+        if (backup != null) {
+            for (i in 0 until backup.length()) {
+                val node = backup.optJSONObject(i) ?: continue
+                val u = node.optString("url")
+                val rate = node.optLong("bit_rate", 0L)
+                if (u.startsWith("http") && rate > bestRate) {
+                    bestRate = rate
+                    best = u
+                }
+            }
+        }
+        if (best != null) out.add(MediaItem(best, MediaItem.Kind.VIDEO, title))
+        else DiagLog.log(context, "parse", "接口里没有可用的视频地址")
+        return out
+    }
 
     // ---------------------------------------------------------------- 分享页
 

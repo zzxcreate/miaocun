@@ -26,12 +26,6 @@ class AutoShareService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var running = false
 
-    /**
-     * 分享面板里「复制链接」的候选文字，越靠前优先级越高。
-     * 不同抖音版本的文案不一样：老版本是「复制链接」，新版本是「分享链接」。
-     */
-    private val copyLabels = listOf("复制链接", "分享链接", "拷贝链接", "复制", "链接")
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         current = this
@@ -60,9 +54,8 @@ class AutoShareService : AccessibilityService() {
     }
 
     private fun findShareButton(attempt: Int) {
-        val root = rootInActiveWindow
-        val node = findNode(root) { label -> label == "分享" }
-            ?: findNode(root) { label -> label.contains("分享") && label.length <= 6 }
+        val node = findInAll { label -> label == "分享" }
+            ?: findInAll { label -> label.contains("分享") && label.length <= 8 }
 
         if (node != null) {
             DiagLog.log(this, "auto", "点「" + labelOf(node) + "」打开分享面板")
@@ -72,7 +65,7 @@ class AutoShareService : AccessibilityService() {
         }
 
         if (attempt >= 5) {
-            dumpLabels(root, "找不到「分享」按钮")
+            dumpLabels("找不到「分享」按钮")
             fail("没找到「分享」按钮，请手动分享后点「粘贴解析」")
             return
         }
@@ -80,23 +73,17 @@ class AutoShareService : AccessibilityService() {
     }
 
     private fun pollCopy(attempt: Int) {
-        if (attempt > 20) {
-            dumpLabels(rootInActiveWindow, "等不到复制入口")
+        if (attempt > 24) {
+            dumpLabels("等不到复制入口")
             fail("没等到「复制链接」，请手动复制后点「粘贴解析」")
             return
         }
 
-        val root = rootInActiveWindow
-        var found: AccessibilityNodeInfo? = null
-        for (label in copyLabels) {
-            found = findNode(root) { text -> text == label }
-            if (found != null) break
-        }
-        val node = found
+        val node = findInAll { label -> isCopyLabel(label) }
 
         if (node == null) {
-            if (attempt == 6 || attempt == 14) {
-                dumpLabels(root, "还没出现复制入口 #" + attempt)
+            if (attempt == 4 || attempt == 12 || attempt == 20) {
+                dumpLabels("还没出现复制入口 #" + attempt)
             }
             handler.postDelayed({ pollCopy(attempt + 1) }, 180)
             return
@@ -108,6 +95,10 @@ class AutoShareService : AccessibilityService() {
         // 读不到会自己提示用户，不会静默失败。
         handler.postDelayed({ openClipActivity() }, 750)
     }
+
+    private fun isCopyLabel(label: String): Boolean =
+        label == "复制链接" || label == "分享链接" || label == "拷贝链接" || label == "复制" ||
+            label.contains("复制链接") || label.contains("分享链接") || label.contains("拷贝链接")
 
     private fun openClipActivity() {
         running = false
@@ -132,6 +123,35 @@ class AutoShareService : AccessibilityService() {
 
     // ------------------------------------------------------------ 节点工具
 
+    /**
+     * 当前所有可访问窗口的根节点，跳过本应用自己的悬浮窗。
+     *
+     * 只取 rootInActiveWindow 是不够的：用户刚点过悬浮球，活动窗口可能还是我们自己的
+     * 覆盖层，里面只有「存」字，于是永远找不到「分享」。
+     */
+    private fun roots(): List<AccessibilityNodeInfo> {
+        val out = ArrayList<AccessibilityNodeInfo>()
+        runCatching {
+            for (window in windows) {
+                val root = window.root ?: continue
+                val pkg = root.packageName?.toString().orEmpty()
+                if (pkg == packageName) continue
+                out.add(root)
+            }
+        }
+        if (out.isEmpty()) {
+            runCatching { rootInActiveWindow?.let { out.add(it) } }
+        }
+        return out
+    }
+
+    private fun findInAll(predicate: (String) -> Boolean): AccessibilityNodeInfo? {
+        for (root in roots()) {
+            findNode(root, 0, predicate)?.let { return it }
+        }
+        return null
+    }
+
     private fun findNode(
         node: AccessibilityNodeInfo?,
         depth: Int = 0,
@@ -154,16 +174,33 @@ class AutoShareService : AccessibilityService() {
         return node.contentDescription?.toString().orEmpty().trim()
     }
 
-    /** 把当前界面里和「复制/分享/链接」相关的文字打进日志，用来适配新版抖音。 */
-    private fun dumpLabels(root: AccessibilityNodeInfo?, reason: String) {
-        val labels = ArrayList<String>()
-        collectLabels(root, labels, 0)
-        val interesting = labels
-            .filter { it.contains("复制") || it.contains("分享") || it.contains("链接") ||
-                it.contains("保存") || it.contains("下载") || it.contains("相册") }
-            .distinct()
-            .take(30)
-        DiagLog.log(this, "auto", reason + "；画面相关文字=" + interesting.joinToString(" / "))
+    /** 把当前界面上的文字打进日志，用来适配新版抖音的按钮文案。 */
+    private fun dumpLabels(reason: String) {
+        val all = ArrayList<String>()
+        val pkgs = ArrayList<String>()
+        runCatching {
+            for (window in windows) {
+                val root = window.root ?: continue
+                val pkg = root.packageName?.toString().orEmpty()
+                if (pkg.isNotEmpty()) pkgs.add(pkg)
+                collectLabels(root, all, 0)
+            }
+        }
+        if (all.isEmpty()) {
+            runCatching { collectLabels(rootInActiveWindow, all, 0) }
+        }
+        val labels = all.distinct().take(40)
+        val interesting = labels.filter {
+            it.contains("复制") || it.contains("分享") || it.contains("链接") ||
+                it.contains("保存") || it.contains("下载") || it.contains("相册")
+        }
+        DiagLog.log(
+            this,
+            "auto",
+            reason + "；窗口=" + pkgs.distinct().joinToString(",") +
+                "；相关文字=" + interesting.joinToString(" / ") +
+                "；可见文字=" + labels.joinToString(" / ")
+        )
     }
 
     private fun collectLabels(
