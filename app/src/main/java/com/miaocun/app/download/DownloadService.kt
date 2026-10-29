@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.miaocun.app.MainActivity
+import com.miaocun.app.core.DiagLog
 import com.miaocun.app.core.HistoryItem
 import com.miaocun.app.core.HistoryStore
 import com.miaocun.app.core.MediaSaver
@@ -63,6 +64,12 @@ class DownloadService : Service() {
         val kind = intent.getStringExtra(EXTRA_KIND)
         val title = intent.getStringExtra(EXTRA_TITLE)
 
+        DiagLog.log(
+            this,
+            "download",
+            "收到任务 share=" + share?.take(140) + " url=" + directUrl?.take(120) + " kind=" + kind
+        )
+
         work?.cancel()
         work = scope.launch {
             try {
@@ -77,6 +84,13 @@ class DownloadService : Service() {
                 } else {
                     DouyinParser.parse(this@DownloadService, share.orEmpty())
                 }
+
+                DiagLog.log(
+                    this@DownloadService,
+                    "parse",
+                    "解析到 " + items.size + " 个媒体：" +
+                        items.joinToString(" | ") { it.kind.toString() + ":" + it.url.take(90) }
+                )
 
                 if (items.isEmpty()) {
                     finishWith("解析失败", "没能从链接里找到视频或图片")
@@ -102,6 +116,11 @@ class DownloadService : Service() {
                     finishWith("保存失败", "请检查网络后重试")
                 }
             } catch (t: Throwable) {
+                DiagLog.log(
+                    this@DownloadService,
+                    "error",
+                    t.javaClass.simpleName + ": " + (t.message ?: "") + "\n" + t.stackTraceToString()
+                )
                 finishWith("保存失败", t.message ?: t.javaClass.simpleName)
             } finally {
                 withContext(Dispatchers.Main) {
@@ -159,6 +178,11 @@ class DownloadService : Service() {
             )
             true
         } catch (t: Throwable) {
+            DiagLog.log(
+                this@DownloadService,
+                "save",
+                "失败 " + item.url.take(90) + " -> " + (t.message ?: t.javaClass.simpleName)
+            )
             MediaSaver.delete(this@DownloadService, uri)
             false
         }
@@ -236,16 +260,21 @@ class DownloadService : Service() {
     }
 
     private suspend fun finishWith(title: String, text: String) {
+        DiagLog.log(this, "done", title + " | " + text)
         withContext(Dispatchers.Main) {
-            val done: Notification = Notifications.builder(this@DownloadService, Notifications.CHANNEL_SAVE)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setContentIntent(contentIntent())
-                .setAutoCancel(true)
-                .setOngoing(false)
-                .build()
-            notifyManager().notify(Notifications.ID_SAVE, done)
+            // 进度通知与结果通知必须分两个 ID：
+            // stopForeground(STOP_FOREGROUND_REMOVE) 会把前台通知一起撤掉，
+            // 以前两者共用 ID_SAVE，导致「解析完就没反应」。
+            notifyManager().cancel(Notifications.ID_SAVE)
             stopForeground(STOP_FOREGROUND_REMOVE)
+            val done: Notification = Notifications.resultNotification(
+                this@DownloadService,
+                title,
+                text
+            )
+                .setContentIntent(contentIntent())
+                .build()
+            notifyManager().notify(Notifications.ID_DONE, done)
             stopSelf()
         }
     }

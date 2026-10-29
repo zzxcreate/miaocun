@@ -12,22 +12,30 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.miaocun.app.ClipActivity
+import com.miaocun.app.core.DiagLog
 
 /**
  * 无障碍服务：只做两件事
- * 1. 自动点「分享」→「复制链接」，让悬浮球一键拿到分享链接；
+ * 1. 自动点「分享」→「复制链接 / 分享链接」，让悬浮球一键拿到分享链接；
  * 2. 调用系统截图接口，把当前画面交给悬浮窗保存。
  *
- * 不读取、不保存、不上传任何页面文本内容。
+ * 不读取、不保存、不上传任何页面文本内容；调试日志只记录点了哪些按钮。
  */
 class AutoShareService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var running = false
 
+    /**
+     * 分享面板里「复制链接」的候选文字，越靠前优先级越高。
+     * 不同抖音版本的文案不一样：老版本是「复制链接」，新版本是「分享链接」。
+     */
+    private val copyLabels = listOf("复制链接", "分享链接", "拷贝链接", "复制", "链接")
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         current = this
+        DiagLog.log(this, "auto", "无障碍服务已连接")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -37,6 +45,7 @@ class AutoShareService : AccessibilityService() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         if (current === this) current = null
+        DiagLog.log(this, "auto", "无障碍服务已断开")
         super.onDestroy()
     }
 
@@ -45,40 +54,59 @@ class AutoShareService : AccessibilityService() {
     private fun startAutoShare() {
         if (running) return
         running = true
+        DiagLog.log(this, "auto", "开始自动复制链接")
         toast("正在自动复制链接…")
         findShareButton(0)
     }
 
     private fun findShareButton(attempt: Int) {
-        val node = findNode(rootInActiveWindow) { label ->
-            label == "分享" || label.contains("分享")
-        }
+        val root = rootInActiveWindow
+        val node = findNode(root) { label -> label == "分享" }
+            ?: findNode(root) { label -> label.contains("分享") && label.length <= 6 }
+
         if (node != null) {
+            DiagLog.log(this, "auto", "点「" + labelOf(node) + "」打开分享面板")
             clickNode(node)
-            handler.postDelayed({ pollCopy(0) }, 350)
+            handler.postDelayed({ pollCopy(0) }, 400)
             return
         }
-        if (attempt >= 4) {
-            fail("没找到「分享」按钮，请手动 分享 → 复制链接")
+
+        if (attempt >= 5) {
+            dumpLabels(root, "找不到「分享」按钮")
+            fail("没找到「分享」按钮，请手动分享后点「粘贴解析」")
             return
         }
         handler.postDelayed({ findShareButton(attempt + 1) }, 300)
     }
 
     private fun pollCopy(attempt: Int) {
-        if (attempt > 16) {
+        if (attempt > 20) {
+            dumpLabels(rootInActiveWindow, "等不到复制入口")
             fail("没等到「复制链接」，请手动复制后点「粘贴解析」")
             return
         }
-        val node = findNode(rootInActiveWindow) { label ->
-            label.contains("复制链接") || label == "复制"
+
+        val root = rootInActiveWindow
+        var found: AccessibilityNodeInfo? = null
+        for (label in copyLabels) {
+            found = findNode(root) { text -> text == label }
+            if (found != null) break
         }
-        if (node != null) {
-            clickNode(node)
-            handler.postDelayed({ openClipActivity() }, 600)
-        } else {
-            handler.postDelayed({ pollCopy(attempt + 1) }, 150)
+        val node = found
+
+        if (node == null) {
+            if (attempt == 6 || attempt == 14) {
+                dumpLabels(root, "还没出现复制入口 #" + attempt)
+            }
+            handler.postDelayed({ pollCopy(attempt + 1) }, 180)
+            return
         }
+
+        DiagLog.log(this, "auto", "点「" + labelOf(node) + "」")
+        clickNode(node)
+        // 点完不管是「复制链接」还是「分享链接」，都交给 ClipActivity 去读剪贴板；
+        // 读不到会自己提示用户，不会静默失败。
+        handler.postDelayed({ openClipActivity() }, 750)
     }
 
     private fun openClipActivity() {
@@ -102,20 +130,53 @@ class AutoShareService : AccessibilityService() {
         }
     }
 
+    // ------------------------------------------------------------ 节点工具
+
     private fun findNode(
         node: AccessibilityNodeInfo?,
         depth: Int = 0,
         predicate: (String) -> Boolean
     ): AccessibilityNodeInfo? {
         if (node == null || depth > 40) return null
-        val text = node.text?.toString().orEmpty()
-        val label = text.ifEmpty { node.contentDescription?.toString().orEmpty() }
+        val label = labelOf(node)
         if (label.isNotEmpty() && predicate(label)) return node
         for (i in 0 until node.childCount) {
             val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
             findNode(child, depth + 1, predicate)?.let { return it }
         }
         return null
+    }
+
+    private fun labelOf(node: AccessibilityNodeInfo?): String {
+        if (node == null) return ""
+        val text = node.text?.toString().orEmpty().trim()
+        if (text.isNotEmpty()) return text
+        return node.contentDescription?.toString().orEmpty().trim()
+    }
+
+    /** 把当前界面里和「复制/分享/链接」相关的文字打进日志，用来适配新版抖音。 */
+    private fun dumpLabels(root: AccessibilityNodeInfo?, reason: String) {
+        val labels = ArrayList<String>()
+        collectLabels(root, labels, 0)
+        val interesting = labels
+            .filter { it.contains("复制") || it.contains("分享") || it.contains("链接") ||
+                it.contains("保存") || it.contains("下载") || it.contains("相册") }
+            .distinct()
+            .take(30)
+        DiagLog.log(this, "auto", reason + "；画面相关文字=" + interesting.joinToString(" / "))
+    }
+
+    private fun collectLabels(
+        node: AccessibilityNodeInfo?,
+        out: MutableList<String>,
+        depth: Int
+    ) {
+        if (node == null || depth > 40 || out.size > 500) return
+        val label = labelOf(node)
+        if (label.isNotEmpty()) out.add(label)
+        for (i in 0 until node.childCount) {
+            collectLabels(runCatching { node.getChild(i) }.getOrNull(), out, depth + 1)
+        }
     }
 
     private fun clickNode(node: AccessibilityNodeInfo?): Boolean {

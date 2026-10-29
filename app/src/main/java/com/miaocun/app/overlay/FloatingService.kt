@@ -21,6 +21,7 @@ import com.miaocun.app.ClipActivity
 import com.miaocun.app.MainActivity
 import com.miaocun.app.R
 import com.miaocun.app.accessibility.AutoShareService
+import com.miaocun.app.core.DiagLog
 import com.miaocun.app.core.HistoryItem
 import com.miaocun.app.core.HistoryStore
 import com.miaocun.app.core.Notifications
@@ -263,23 +264,52 @@ class FloatingService : Service() {
     private fun onScreenshot() {
         hidePanel()
         val bubbleView = bubble ?: return
-        // 先让悬浮球退出画面，避免截进自己
-        bubbleView.visibility = View.GONE
+        val params = bubbleParams
+        // 直接把窗口从 WindowManager 移除：只把 View 设成 GONE 时，
+        // 合成层可能还留着它的残影，截图会把悬浮球一起截进去。
+        bubble = null
+        runCatching { windowManager.removeView(bubbleView) }
+        DiagLog.log(this, "shot", "已移除悬浮球，准备截图")
 
         handler.postDelayed({
             val accepted = AutoShareService.capture { bitmap ->
-                bubbleView.visibility = View.VISIBLE
+                restoreBubble(bubbleView, params)
                 if (bitmap == null) {
+                    DiagLog.log(
+                        this@FloatingService,
+                        "shot",
+                        "截图返回空（需要 Android 11+ 且无障碍已连接）"
+                    )
                     toast("截图失败：需要 Android 11+ 并已开启无障碍服务")
                 } else {
+                    DiagLog.log(
+                        this@FloatingService,
+                        "shot",
+                        "截图成功 " + bitmap.width + "x" + bitmap.height
+                    )
                     saveScreenshot(bitmap)
                 }
             }
             if (!accepted) {
-                bubbleView.visibility = View.VISIBLE
+                restoreBubble(bubbleView, params)
+                DiagLog.log(this@FloatingService, "shot", "无障碍未连接，无法截图")
                 toast("需要先开启无障碍服务（Android 11+ 支持静默截图）")
             }
-        }, 240)
+        }, 450)
+    }
+
+    /** 截完图把悬浮球放回去，位置沿用被移除前的参数。 */
+    private fun restoreBubble(view: View, params: WindowManager.LayoutParams?) {
+        if (detached || bubble != null) return
+        if (params != null) {
+            val ok = runCatching { windowManager.addView(view, params) }.isSuccess
+            if (ok) {
+                bubble = view
+                bubbleParams = params
+                return
+            }
+        }
+        addBubble()
     }
 
     private fun saveScreenshot(bitmap: Bitmap) {

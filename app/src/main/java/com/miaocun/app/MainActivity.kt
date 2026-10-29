@@ -1,5 +1,8 @@
 package com.miaocun.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -16,6 +19,7 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.miaocun.app.accessibility.AutoShareService
+import com.miaocun.app.core.DiagLog
 import com.miaocun.app.core.HistoryStore
 import com.miaocun.app.core.Prefs
 import com.miaocun.app.overlay.FloatingService
@@ -46,6 +50,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnClip: Button
     private lateinit var btnClearHistory: Button
     private lateinit var layoutHistory: LinearLayout
+    private lateinit var tvDiag: TextView
+    private lateinit var btnCopyDiag: Button
+    private lateinit var btnClearDiag: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         refreshStatus()
         renderHistory()
+        renderDiag()
     }
 
     private fun bindViews() {
@@ -81,6 +89,9 @@ class MainActivity : AppCompatActivity() {
         btnClip = findViewById(R.id.btnClip)
         btnClearHistory = findViewById(R.id.btnClearHistory)
         layoutHistory = findViewById(R.id.layoutHistory)
+        tvDiag = findViewById(R.id.tvDiag)
+        btnCopyDiag = findViewById(R.id.btnCopyDiag)
+        btnClearDiag = findViewById(R.id.btnClearDiag)
     }
 
     private fun fillFields() {
@@ -133,6 +144,14 @@ class MainActivity : AppCompatActivity() {
             HistoryStore.clear(this)
             renderHistory()
             toast("已清空记录")
+        }
+
+        btnCopyDiag.setOnClickListener { copyDiag() }
+
+        btnClearDiag.setOnClickListener {
+            DiagLog.clear(this)
+            renderDiag()
+            toast("已清空日志")
         }
     }
 
@@ -276,6 +295,26 @@ class MainActivity : AppCompatActivity() {
     private fun saveApi() {
         prefs.api = etApi.text.toString()
         toast(if (prefs.api.isEmpty()) "已恢复内置解析" else "接口已保存")
+    }
+
+    // ------------------------------------------------------------ 诊断
+
+    private fun renderDiag() {
+        val text = DiagLog.read(this)
+        tvDiag.text = if (text.isEmpty()) "暂无日志" else text.takeLast(1600)
+    }
+
+    private fun copyDiag() {
+        val text = DiagLog.read(this)
+        if (text.isEmpty()) {
+            toast("暂无日志")
+            return
+        }
+        runCatching {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("秒存日志", text))
+            toast("日志已复制，直接粘贴发我即可")
+        }.onFailure { toast("复制失败") }
     }
 
     private fun toast(message: String) {

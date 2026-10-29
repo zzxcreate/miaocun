@@ -396,6 +396,62 @@
                 android:orientation="vertical" />
         </LinearLayout>
 
+        <!-- 诊断 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginBottom="0dp"
+                    android:text="⑥ 诊断日志" />
+
+                <Button
+                    android:id="@+id/btnClearDiag"
+                    style="@style/BtnGhost"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="30dp"
+                    android:text="清空" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/Hint"
+                android:text="保存没反应时，点下面的「复制日志」把内容发给我，能直接看出卡在哪一步。" />
+
+            <TextView
+                android:id="@+id/tvDiag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input"
+                android:padding="10dp"
+                android:textColor="@color/muted"
+                android:textIsSelectable="true"
+                android:textSize="10sp"
+                android:typeface="monospace" />
+
+            <Button
+                android:id="@+id/btnCopyDiag"
+                style="@style/BtnGhost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="复制日志" />
+        </LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
