@@ -1,11 +1,13 @@
 package com.miaocun.app.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -238,6 +240,22 @@ class AutoShareService : AccessibilityService() {
         private var current: AutoShareService? = null
 
         fun isConnected(): Boolean = current != null
+
+        /**
+         * 系统设置里是否勾选了本服务。
+         *
+         * 注意这只代表「勾选着」，不代表服务真的活着：应用被强制停止、
+         * 被 ROM 清理、开机后没自启时，这里仍然是 true，但 [current] 为 null。
+         * 界面上必须把这两种状态区分开，否则就会「显示已开启，点了却让你去开启」。
+         */
+        fun isEnabledInSettings(context: Context): Boolean {
+            val enabled = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val pkg = context.packageName
+            return enabled.split(':').any { it.contains(pkg) && it.contains("AutoShareService") }
+        }
 
         /** 触发一次「分享 → 复制链接」，返回是否已受理。 */
         fun triggerAutoShare(): Boolean {

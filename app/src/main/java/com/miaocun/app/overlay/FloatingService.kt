@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -246,8 +247,17 @@ class FloatingService : Service() {
         hidePanel()
         if (AutoShareService.triggerAutoShare()) {
             toast("正在自动复制链接…")
-        } else {
-            toast("请先开启「秒存」无障碍服务")
+            return
+        }
+        // 失败只有两种可能：从来没开过，或者开过但服务被系统停掉了（设置里还勾着）。
+        val listed = AutoShareService.isEnabledInSettings(this)
+        DiagLog.log(this, "auto", "自动分享不可用：设置已勾选=$listed，服务已连接=false")
+        toast(if (listed) "无障碍服务没在运行，请在设置里关掉再打开一次" else "请先开启「秒存」无障碍服务")
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
         }
     }
 

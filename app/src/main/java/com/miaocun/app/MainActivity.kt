@@ -66,6 +66,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+        // 从系统「无障碍」设置页返回时，系统绑定服务要几十到几百毫秒，
+        // 所以过一会儿再刷新一次，避免刚回来就被判成「没连上」。
+        window.decorView.postDelayed({ refreshStatus() }, 900)
         renderHistory()
         renderDiag()
     }
@@ -161,13 +164,18 @@ class MainActivity : AppCompatActivity() {
         val overlayOk = Settings.canDrawOverlays(this)
         setStatus(tvOverlayStatus, overlayOk, "已开启", "未开启 · 点右侧去开启")
 
-        val accessibilityOk = isAccessibilityEnabled()
-        setStatus(
-            tvAccessibilityStatus,
-            accessibilityOk,
-            "已开启",
-            "未开启 · 自动分享与截图需要它"
-        )
+        val connected = AutoShareService.isConnected()
+        val listed = AutoShareService.isEnabledInSettings(this)
+        if (connected) {
+            setStatus(tvAccessibilityStatus, true, "已开启", "")
+        } else if (listed) {
+            // 设置里勾着，但服务已经被系统/ROM 停掉了：这是用户反馈的那个「显示有、其实没」。
+            tvAccessibilityStatus.text = "系统里勾了，但服务没连上 · 点右侧关掉再打开一次"
+            tvAccessibilityStatus.setTextColor(ContextCompat.getColor(this, R.color.warn))
+            DiagLog.log(this, "main", "无障碍：设置里已勾选，但服务未连接")
+        } else {
+            setStatus(tvAccessibilityStatus, false, "已开启", "未开启 · 自动分享与截图需要它")
+        }
 
         val notificationOk = NotificationManagerCompat.from(this).areNotificationsEnabled()
         setStatus(
@@ -188,17 +196,6 @@ class MainActivity : AppCompatActivity() {
         view.setTextColor(
             ContextCompat.getColor(this, if (ok) R.color.ok else R.color.warn)
         )
-    }
-
-    private fun isAccessibilityEnabled(): Boolean {
-        if (AutoShareService.isConnected()) return true
-        val enabled = Settings.Secure.getString(
-            contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        return enabled.split(':').any { part ->
-            part.contains(packageName) && part.contains("AutoShareService")
-        }
     }
 
     // ------------------------------------------------------------ 记录
