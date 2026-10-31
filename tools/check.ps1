@@ -82,7 +82,7 @@ if (Test-Path $layoutDir) {
     }
 }
 
-$drawableDirs = @("drawable", "drawable-nodpi", "drawable-anydpi", "mipmap", "mipmap-anydpi-v26", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi")
+$drawableDirs = @("drawable", "drawable-nodpi", "drawable-anydpi", "drawable-hdpi", "drawable-xhdpi", "drawable-xxhdpi", "drawable-xxxhdpi", "mipmap", "mipmap-anydpi-v26", "mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi")
 foreach ($sub in $drawableDirs) {
     $dir = Join-Path $res $sub
     if (Test-Path $dir) {
